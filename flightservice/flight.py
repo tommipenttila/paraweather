@@ -28,3 +28,11 @@ class Launch:
     launchname: str
     coordinates: Tuple[float, float]
     registered: bool
+
+    def latitude(self):
+
+        return self.coordinates[0]
+
+    def longitude(self):
+
+        return self.coordinates[1]

@@ -18,6 +18,7 @@ PARAMETER_TITLE = 'title'
 VALUE_REGISTERED_LAUNCH = 'registered takeoff'
 FORMAT_LAUNCHTIME = '%d.%m.%y %H:%M'
 
+
 class XContestScraper:
 
 
@@ -52,8 +53,9 @@ class XContestScraper:
 
         xcontesthtml = self.retrieve_xcontest_search_page()
         flightstable = self.scrape_flight_rows(searchpagetree=xcontesthtml)
-        for flightrow in flightstable:
-            flight = self.html_flight_conversion(flightrow)
+        for resultrowelement in flightstable:
+            resultrow = self.ResultRow(resultrowelement)
+            flight = resultrow.extractFlight() #self.html_flight_conversion(flightrow)
             yield flight
 
     def scrape_flight_rows(self, searchpagetree: html.HtmlElement) -> List[html.HtmlElement]:
@@ -68,71 +70,89 @@ class XContestScraper:
         return flightstable
 
 
-    def html_flight_conversion(self, row: html.HtmlElement) -> Flight:
-
-        # extract launch site data first. Extractors order and types must follow Launch class constructor signature
-        launchextractorfunctions = [self.extract_launch_name, self.extract_launch_coordinates, self.extract_launch_is_registered]
-        launchparameters = []
-        for launchextractor in launchextractorfunctions:
-
-            try:
-                launchparameters.append(launchextractor(row))
-            except:
-                logging.fatal(f'Unable to extract launch data func={launchextractor.__name__}. Gathered: {launchparameters}')
-                exit(1)
-
-        launch = Launch(*launchparameters)
-
-        # extract flight data
-        flightextractors = [self.extract_launchtime, self.extract_distance]
-        flightparameters = [launch]
-        for flightextractor in flightextractors:
-            try:
-                flightparameters.append(flightextractor(row))
-            except:
-                logging.fatal(f'Unable to extract flight data {flightextractor.__name__}. Gathered: {flightparameters}')
-
-        flight = Flight(*flightparameters)
-
-        return flight
 
 
-     def extract_launch_name(self, row: html.HtmlElement) -> str:
+    class ResultRow:
+        '''
+        Inner class for isolating result row values extraction
+        '''
 
-        launchlinkelements = row.xpath('td/div/a[@class="lau"]')
+        def __init__(self, rowelement: html.HtmlElement):
 
-        # required, fail if missing
-        return launchlinkelements[0].text_content()
+            self.element = rowelement
 
-    def extract_launch_coordinates(self, row: html.HtmlElement) -> Tuple[float, float]:
+        def extractFlight(self) -> Flight:
 
-        href = row.xpath('td/div/a[@class="lau"]')[0].attrib.get('href')
-        queryparams = parse.parse_qs(parse.urlsplit(href).query)
-        pointparam = queryparams.get(PARAMETER_FILTER_POINT)
+            return self.html_flight_conversion(self.element)
 
-        # required, fail if missing
-        point = pointparam[0].split()
-        longitude, latitude = [float(x) for x in point]
+        def html_flight_conversion(self, row: html.HtmlElement) -> Flight:
 
-        return longitude, latitude
+            # extract launch site data first. Extractors order and types must follow Launch class constructor signature
+            launchextractorfunctions = [self.extract_launch_name, self.extract_launch_coordinates,
+                                        self.extract_launch_is_registered]
+            launchparameters = []
+            for launchextractor in launchextractorfunctions:
 
-    def extract_launch_is_registered(self, row: html.HtmlElement):
+                try:
+                    launchparameters.append(launchextractor(row))
+                except:
+                    logging.fatal(
+                        f'Unable to extract launch data func={launchextractor.__name__}. Gathered: {launchparameters}')
+                    exit(1)
 
-        return row.xpath('td/div/span[@class="lau"]')[0].attrib.get(PARAMETER_TITLE) == VALUE_REGISTERED_LAUNCH
+            launch = Launch(*launchparameters)
 
-    def extract_distance(self, row: html.HtmlElement):
+            # extract flight data
+            flightextractors = [self.extract_launchtime, self.extract_distance]
+            flightparameters = [launch]
+            for flightextractor in flightextractors:
+                try:
+                    flightparameters.append(flightextractor(row))
+                except:
+                    logging.fatal(
+                        f'Unable to extract flight data {flightextractor.__name__}. Gathered: {flightparameters}')
 
-        # required, fail if missing
-        distancestring = row.xpath('td[@class="km"]/strong')[0].text_content()
+            flight = Flight(*flightparameters)
 
-        return float(distancestring)
+            return flight
 
-    def extract_launchtime(self, row: html.HtmlElement):
+        def extract_launch_name(self, row: html.HtmlElement) -> str:
 
-        launchtimestring = row.xpath('td[contains(@title, "submitted:")]')[0].text_content()
-        launchtime = datetime.strptime(launchtimestring, FORMAT_LAUNCHTIME)
+            launchlinkelements = row.xpath('td/div/a[@class="lau"]')
 
-        return launchtime
+            # required, fail if missing
+            return launchlinkelements[0].text_content()
+
+        def extract_launch_coordinates(self, row: html.HtmlElement) -> Tuple[float, float]:
+
+            href = row.xpath('td/div/a[@class="lau"]')[0].attrib.get('href')
+            queryparams = parse.parse_qs(parse.urlsplit(href).query)
+            pointparam = queryparams.get(PARAMETER_FILTER_POINT)
+
+            # required, fail if missing
+            point = pointparam[0].split()
+            longitude, latitude = [float(x) for x in point]
+
+            return longitude, latitude
+
+        def extract_launch_is_registered(self, row: html.HtmlElement):
+
+            return row.xpath('td/div/span[@class="lau"]')[0].attrib.get(PARAMETER_TITLE) == VALUE_REGISTERED_LAUNCH
+
+        def extract_distance(self, row: html.HtmlElement):
+
+            # required, fail if missing
+            distancestring = row.xpath('td[@class="km"]/strong')[0].text_content()
+
+            return float(distancestring)
+
+        def extract_launchtime(self, row: html.HtmlElement):
+
+            launchtimestring = row.xpath('td[contains(@title, "submitted:")]')[0].text_content()
+            launchtime = datetime.strptime(launchtimestring, FORMAT_LAUNCHTIME)
+
+            return launchtime
+
 
 if __name__ == '__main__':
 

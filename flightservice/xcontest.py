@@ -20,7 +20,9 @@ FORMAT_LAUNCHTIME = '%d.%m.%y %H:%M'
 
 
 class XContestScraper:
-
+    '''
+    Responsible for retrieving XContest flight search pages and scraping flight and launch site information from them.
+    '''
 
     def __init__(self):
 
@@ -41,26 +43,64 @@ class XContestScraper:
             # TODO: cache fill
 
 
-    def retrieve_xcontest_search_page(self) -> html.HtmlElement:
-
-        logging.info(f'Retrieving XContest search page at {self.xcontestsearchurl}')
-        searchpage = requests.get(self.xcontestsearchurl)
+    def retrieve_xcontest_search_page(self, searchpageurl: str) -> html.HtmlElement:
+        '''
+        For given URL, retrieve HTML page and parse into HtmlElement
+        :param searchpageurl: string
+        :return: HtmlElement
+        '''
+        logging.info(f'Retrieving XContest search page at {searchpageurl}')
+        searchpage = requests.get(searchpageurl)
         tree = html.fromstring(searchpage.content)
 
         return tree
 
-    def flights(self) -> Flight:
 
-        xcontesthtml = self.retrieve_xcontest_search_page()
-        flightstable = self.scrape_flight_rows(searchpagetree=xcontesthtml)
-        for resultrowelement in flightstable:
-            resultrow = self.ResultRow(resultrowelement)
-            flight = resultrow.extractFlight() #self.html_flight_conversion(flightrow)
-            yield flight
+
+    def results_page_url(self, searchpage: html.HtmlElement) -> str:
+        '''
+        If no page is yet retrieve, use envar set in XCONTEST_SEARCH_URL.
+        If page is already retrieved, look for "next page" link and return that.
+        Failing both, return None
+        :param searchpage: HtmlElement
+        :return: URL string or None
+        '''
+
+        nextpagelink = None
+
+        if searchpage is not None:
+            nextpagetags = searchpage.xpath('//a[@title="next page"]')
+            if nextpagetags:
+                nextpagelink = nextpagetags[0].attrib.get('href')
+        else:
+            nextpagelink = self.xcontestsearchurl
+
+        return nextpagelink
+
+
+    def flights(self) -> Flight:
+        '''
+        A generator for returning Flight objects for every result line found in all html results pages
+        :return:
+        '''
+        searchpageelement = None
+        searchpageurl = self.results_page_url(searchpageelement)
+
+        while searchpageurl:
+            searchpageelement = self.retrieve_xcontest_search_page(searchpageurl=searchpageurl)
+            flightstable = self.scrape_flight_rows(searchpagetree=searchpageelement)
+
+            for resultrowelement in flightstable:
+                resultrow = self.ResultRow(resultrowelement)
+                flight = resultrow.extractFlight() #self.html_flight_conversion(flightrow)
+                yield flight
+
+            searchpageurl = self.results_page_url(searchpageelement)
+
 
     def scrape_flight_rows(self, searchpagetree: html.HtmlElement) -> List[html.HtmlElement]:
         '''
-
+        Find actual resultset amongst all other tags
         :param searchpagetree:
         :return:
         '''

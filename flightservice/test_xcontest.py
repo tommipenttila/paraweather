@@ -9,6 +9,7 @@ import flightservice.xcontest as xcontest
 class TestScraper(unittest.TestCase):
 
 
+    # Format retrieved from XContest search results 2019-02-22
     RESULT_HTML_FRAGMENT = '''<tr id="flight-1346457" class="  ">
   <td title="FLID:1346457">1</td>
   <td title="submitted: 20.05. 00:51">19.05.18 <em>07:47</em>
@@ -66,8 +67,10 @@ class TestScraper(unittest.TestCase):
 
         self.assertTrue(isregisteredlaunch, msg=f'Expected registered_launch to be True. Is false.')
 
-    def test_(self):
+    def test_extract_launchtime(self):
 
         launchtime = self.row.extract_launchtime()
         comparisontime = datetime.fromisoformat('2018-05-19 07:47')
         self.assertEqual(launchtime, comparisontime, msg=f'Expected {comparisontime}, got {launchtime}')
+
+

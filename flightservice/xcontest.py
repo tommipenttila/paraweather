@@ -83,10 +83,6 @@ class XContestScraper:
 
         def extractFlight(self) -> Flight:
 
-            return self.html_flight_conversion(self.element)
-
-        def html_flight_conversion(self, row: html.HtmlElement) -> Flight:
-
             # extract launch site data first. Extractors order and types must follow Launch class constructor signature
             launchextractorfunctions = [self.extract_launch_name, self.extract_launch_coordinates,
                                         self.extract_launch_is_registered]
@@ -94,7 +90,7 @@ class XContestScraper:
             for launchextractor in launchextractorfunctions:
 
                 try:
-                    launchparameters.append(launchextractor(row))
+                    launchparameters.append(launchextractor())
                 except:
                     logging.fatal(
                         f'Unable to extract launch data func={launchextractor.__name__}. Gathered: {launchparameters}')
@@ -107,7 +103,7 @@ class XContestScraper:
             flightparameters = [launch]
             for flightextractor in flightextractors:
                 try:
-                    flightparameters.append(flightextractor(row))
+                    flightparameters.append(flightextractor())
                 except:
                     logging.fatal(
                         f'Unable to extract flight data {flightextractor.__name__}. Gathered: {flightparameters}')
@@ -116,16 +112,16 @@ class XContestScraper:
 
             return flight
 
-        def extract_launch_name(self, row: html.HtmlElement) -> str:
+        def extract_launch_name(self) -> str:
 
-            launchlinkelements = row.xpath('td/div/a[@class="lau"]')
+            launchlinkelements = self.element.xpath('td/div/a[@class="lau"]')
 
             # required, fail if missing
             return launchlinkelements[0].text_content()
 
-        def extract_launch_coordinates(self, row: html.HtmlElement) -> Tuple[float, float]:
+        def extract_launch_coordinates(self) -> Tuple[float, float]:
 
-            href = row.xpath('td/div/a[@class="lau"]')[0].attrib.get('href')
+            href = self.element.xpath('td/div/a[@class="lau"]')[0].attrib.get('href')
             queryparams = parse.parse_qs(parse.urlsplit(href).query)
             pointparam = queryparams.get(PARAMETER_FILTER_POINT)
 
@@ -135,20 +131,20 @@ class XContestScraper:
 
             return longitude, latitude
 
-        def extract_launch_is_registered(self, row: html.HtmlElement):
+        def extract_launch_is_registered(self):
 
-            return row.xpath('td/div/span[@class="lau"]')[0].attrib.get(PARAMETER_TITLE) == VALUE_REGISTERED_LAUNCH
+            return self.element.xpath('td/div/span[@class="lau"]')[0].attrib.get(PARAMETER_TITLE) == VALUE_REGISTERED_LAUNCH
 
-        def extract_distance(self, row: html.HtmlElement):
+        def extract_distance(self):
 
             # required, fail if missing
-            distancestring = row.xpath('td[@class="km"]/strong')[0].text_content()
+            distancestring = self.element.xpath('td[@class="km"]/strong')[0].text_content()
 
             return float(distancestring)
 
-        def extract_launchtime(self, row: html.HtmlElement):
+        def extract_launchtime(self):
 
-            launchtimestring = row.xpath('td[contains(@title, "submitted:")]')[0].text_content()
+            launchtimestring = self.element.xpath('td[contains(@title, "submitted:")]')[0].text_content().strip()
             launchtime = datetime.strptime(launchtimestring, FORMAT_LAUNCHTIME)
 
             return launchtime

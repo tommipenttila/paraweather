@@ -149,7 +149,7 @@ class XContestScraper:
                         f'Unable to extract flight data {flightextractor.__name__}. Gathered: {flightparameters}')
 
             flight = Flight(**flightparameters)
-            breakpoint()
+
             return flight
 
         def extract_launch_name(self) -> str:

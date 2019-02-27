@@ -124,32 +124,32 @@ class XContestScraper:
         def extractFlight(self) -> Flight:
 
             # extract launch site data first. Extractors order and types must follow Launch class constructor signature
-            launchextractorfunctions = [self.extract_launch_name, self.extract_launch_coordinates,
-                                        self.extract_launch_is_registered]
-            launchparameters = []
-            for launchextractor in launchextractorfunctions:
+            launchextractorfunctions = [('launchname', self.extract_launch_name), ('coordinates', self.extract_launch_coordinates),
+                                        ('registered', self.extract_launch_is_registered)]
+            launchparameters = {}
+            for parametername, launchextractor in launchextractorfunctions:
 
                 try:
-                    launchparameters.append(launchextractor())
+                    launchparameters[parametername] = launchextractor()
                 except:
                     logging.fatal(
                         f'Unable to extract launch data func={launchextractor.__name__}. Gathered: {launchparameters}')
                     exit(1)
 
-            launch = Launch(*launchparameters)
+            launch = Launch(**launchparameters)
 
             # extract flight data
-            flightextractors = [self.extract_launchtime, self.extract_distance]
-            flightparameters = [launch]
-            for flightextractor in flightextractors:
+            flightextractors = [('launchtime', self.extract_launchtime), ('distance', self.extract_distance)]
+            flightparameters = {'launch': launch}
+            for parametername, flightextractor in flightextractors:
                 try:
-                    flightparameters.append(flightextractor())
+                    flightparameters[parametername] = flightextractor()
                 except:
                     logging.fatal(
                         f'Unable to extract flight data {flightextractor.__name__}. Gathered: {flightparameters}')
 
-            flight = Flight(*flightparameters)
-
+            flight = Flight(**flightparameters)
+            breakpoint()
             return flight
 
         def extract_launch_name(self) -> str:

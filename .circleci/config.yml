@@ -3,9 +3,9 @@ version: 2
 jobs:
   build:
     docker:
-      circleci/python:3.7.2
-      environment:
-        PIPENV_VENV_IN_PROJECT: true
+      -image: circleci/python:3.7.2
+        environment:
+          PIPENV_VENV_IN_PROJECT: true
 
     steps:
       - checkout

@@ -17,7 +17,6 @@ jobs:
           command: |
             sudo pip install pipenv
             pipenv install
-            pipenv shell
       - save_cache:
           key: deps9-{{ .Branch }}-{{ checksum "Pipfile.lock" }}
           paths:
@@ -26,7 +25,7 @@ jobs:
             - "/usr/local/lib/python3.7/site-packages"
       - run:
           command: |
-            python -m unittest -v
+            pipenv run python -m unittest -v
       - store_test_results:
           path: test-results
       - store_artifacts:

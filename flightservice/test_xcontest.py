@@ -74,3 +74,6 @@ class TestScraper(unittest.TestCase):
         self.assertEqual(launchtime, comparisontime, msg=f'Expected {comparisontime}, got {launchtime}')
 
 
+    def test_FAIL_ALWAYS(self):
+
+        self.assertTrue(False, msg='THIS SHOULD FAIL THE CIRCLECI BUILD')

@@ -7,7 +7,9 @@ name = "pypi"
 lxml = "*"
 owslib = "*"
 python-dotenv = "*"
-redis = "*"
+sqlalchemy = "*"
+"psycopg2" = "*"
+"psycopg2-binary" = "*"
 
 [dev-packages]
 

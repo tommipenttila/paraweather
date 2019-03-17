@@ -10,7 +10,7 @@ import requests
 import sys
 import settings # will get loaded
 
-from flightservice.flight import Flight, Launch
+from flightservice.flight import Flight, Launch, LaunchNames
 from flightservice.flightcache import FlightCache
 
 PARAMETER_FILTER_POINT = 'filter[point]'
@@ -36,10 +36,10 @@ class XContestScraper:
         :return:
         '''
         scraper = XContestScraper()
-        for flight in scraper.flights():
+        for launch, launchname, flight in scraper.flights():
 
-            print(flight)
-
+            print(launch, launchname, flight)
+            cache.addFlight(launch=launch, launchname=launchname, flight=flight)
             # TODO: cache fill
 
 
@@ -117,7 +117,7 @@ class XContestScraper:
         Inner class for isolating result row values extraction
         '''
 
-        def __init__(self, rowelement: html.HtmlElement):
+        def __init__(self, rowelement: html.HtmlElement) -> Tuple(Launch, LaunchNames, Flight):
 
             self.element = rowelement
 
@@ -136,7 +136,9 @@ class XContestScraper:
                         f'Unable to extract launch data func={launchextractor.__name__}. Gathered: {launchparameters}')
                     exit(1)
 
-            launch = Launch(**launchparameters)
+            launchname = LaunchNames(name=launchparameters['launchname'])
+            launch = Launch(latitude=launchparameters['coordinates'][0], longitude=launchparameters['coordinates'][1], registered=launchparameters['registered'])
+            #launch = Launch(**launchparameters)
 
             # extract flight data
             flightextractors = [('launchtime', self.extract_launchtime), ('distance', self.extract_distance)]
@@ -148,16 +150,17 @@ class XContestScraper:
                     logging.fatal(
                         f'Unable to extract flight data {flightextractor.__name__}. Gathered: {flightparameters}')
 
-            flight = Flight(**flightparameters)
+            flight = Flight(launchtime=flightparameters['launchtime'], distance=flightparameters['distance'])
+            #flight = Flight(**flightparameters)
 
-            return flight
+            return launch, launchname, flight
 
         def extract_launch_name(self) -> str:
 
             launchlinkelements = self.element.xpath('td/div/a[@class="lau"]')
 
             # required, fail if missing
-            return launchlinkelements[0].text_content()
+            return launchlinkelements[0].text_content().strip()
 
         def extract_launch_coordinates(self) -> Tuple[float, float]:
 
@@ -201,6 +204,6 @@ if __name__ == '__main__':
     # Debug logging for cli invocation
     logging.getLogger().setLevel(logging.DEBUG)
 
-    cache = FlightCache()
+    cache = FlightCache(os.getenv('POSTGISURL', 'postgres://paraweather:paraweather@localhost:5432/paraweather'))
     XContestScraper.fill_flights_cache(cache)
 

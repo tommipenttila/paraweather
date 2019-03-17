@@ -27,7 +27,9 @@ information. The model is queried by
 
 
 #### TODO:
+
 - XContest data cache
+    - [postgis extension installation](http://postgis.net/docs/manual-2.5/postgis_installation.html)
 - FMI data cache
 - react
 - build

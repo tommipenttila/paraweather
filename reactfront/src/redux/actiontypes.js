@@ -1,0 +1,1 @@
+export const RETRIEVE_WEATHER_STATIONS = "Retrieve weather stations";
